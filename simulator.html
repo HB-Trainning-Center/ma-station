@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>CVS670 M/A Station & Tank Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #1a1a2e; color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            height: 100dvh; width: 100vw; position: fixed;
+            overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
+        }
+
+        /* ===== 시작 화면 ===== */
+        #start-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            z-index: 1500; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 16px; touch-action: auto;
+        }
+        #start-overlay h2 {
+            margin-bottom: clamp(8px, 2vh, 16px); text-align: center;
+            font-size: clamp(1.1rem, 4vw, 1.5rem);
+            color: #64b5f6; letter-spacing: 1px;
+        }
+        .mission-brief {
+            background: rgba(100,181,246,0.08); border: 1px solid rgba(100,181,246,0.3);
+            border-radius: 10px; padding: clamp(10px, 3vw, 18px);
+            width: min(88vw, 400px); text-align: left;
+            font-size: clamp(0.72rem, 2.2vw, 0.92rem); line-height: 1.7; color: #aab;
+            margin-bottom: clamp(12px, 3vh, 24px);
+        }
+        .mission-brief strong { color: #ef5350; }
+        .mission-brief em { color: #66bb6a; font-style: normal; font-weight: bold; }
+        .brief-section { margin-bottom: 6px; }
+        .start-btn {
+            padding: 16px 50px; font-size: 1.3rem; font-weight: bold; color: #fff;
+            background: linear-gradient(135deg, #42a5f5, #1e88e5);
+            border: none; border-radius: 12px; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(66,165,245,0.4); touch-action: auto;
+        }
+
+        /* ===== 결과 오버레이 ===== */
+        #result-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1600; display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 20px; touch-action: auto;
+        }
+        #result-overlay.success { background: rgba(39,174,96,0.94); display: flex; }
+        #result-overlay.fail { background: rgba(192,57,43,0.94); display: flex; }
+        .result-title { font-size: clamp(1.5rem, 5vw, 2.2rem); font-weight: bold; margin-bottom: 10px; }
+        .result-detail { font-size: clamp(0.75rem, 2.5vw, 1rem); margin-bottom: 5px; opacity: 0.9; text-align: center; }
+        .result-buttons { display: flex; gap: 14px; margin-top: 16px; }
+        .result-btn {
+            padding: 11px 28px; font-size: 0.95rem; font-weight: bold;
+            color: #fff; border: 2px solid #fff; border-radius: 8px;
+            cursor: pointer; touch-action: auto;
+        }
+        .btn-retry { background: rgba(255,255,255,0.2); }
+        .btn-exit { background: rgba(0,0,0,0.3); }
+
+        /* 점수판 */
+        .score-board {
+            background: rgba(0,0,0,0.25); border-radius: 10px;
+            padding: clamp(8px, 2vh, 14px) clamp(12px, 3vw, 20px);
+            margin: 8px 0; width: min(90vw, 340px);
+        }
+        .score-total {
+            text-align: center; font-size: clamp(1.3rem, 4vw, 1.8rem);
+            font-weight: bold; margin-bottom: 6px; letter-spacing: 1px;
+        }
+        .score-rows { display: flex; flex-direction: column; gap: 4px; }
+        .score-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .score-row:last-child { border-bottom: none; }
+        .score-cat {
+            font-size: clamp(0.68rem, 2vw, 0.82rem); font-weight: bold;
+            min-width: 70px;
+        }
+        .score-stars {
+            font-size: clamp(0.75rem, 2.2vw, 0.95rem);
+            letter-spacing: 1px; flex: 1; text-align: center;
+        }
+        .score-pts {
+            font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+            opacity: 0.8; min-width: 72px; text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        .score-breakdown {
+            margin-top: 6px; font-size: clamp(0.52rem, 1.4vw, 0.65rem);
+            color: rgba(255,255,255,0.6); line-height: 1.5; text-align: center;
+            white-space: pre-line;
+        }
+        .score-bonus {
+            text-align: center; font-size: clamp(0.6rem, 1.8vw, 0.75rem);
+            margin-top: 4px; padding-top: 4px;
+            border-top: 1px solid rgba(255,255,255,0.15);
+        }
+        .bonus-positive { color: #66bb6a; }
+        .bonus-neutral { color: rgba(255,255,255,0.7); }
+        .bonus-negative { color: #ef5350; }
+
+        /* 이름 입력 / 제출 */
+        .submit-area { margin-top: 8px; width: min(90vw, 340px); }
+        .submit-row {
+            display: flex; gap: 8px; align-items: center; justify-content: center;
+        }
+        .name-input {
+            flex: 1; padding: 8px 12px; font-size: clamp(0.8rem, 2.5vw, 1rem);
+            border: 2px solid rgba(255,255,255,0.4); border-radius: 6px;
+            background: rgba(0,0,0,0.3); color: #fff; outline: none;
+            text-align: center; font-weight: bold;
+            touch-action: auto; user-select: text; -webkit-user-select: text;
+        }
+        .name-input::placeholder { color: rgba(255,255,255,0.4); }
+        .name-input:focus { border-color: #64b5f6; }
+        .btn-submit {
+            background: rgba(255,255,255,0.25); white-space: nowrap;
+            padding: 8px 14px; font-size: clamp(0.72rem, 2vw, 0.88rem);
+        }
+        .btn-submit.done { background: rgba(46,204,113,0.4); pointer-events: none; }
+        .submit-status {
+            text-align: center; font-size: clamp(0.6rem, 1.6vw, 0.72rem);
+            margin-top: 4px; min-height: 1em; opacity: 0.8;
+        }
+        .ranking-toggle-btn {
+            margin-top: 6px; padding: 6px 20px;
+            font-size: clamp(0.7rem, 2vw, 0.85rem); font-weight: bold;
+            color: #ffd54f; background: rgba(0,0,0,0.3);
+            border: 1px solid #ffd54f; border-radius: 6px;
+            cursor: pointer; touch-action: auto;
+        }
+
+        /* 랭킹 오버레이 */
+        #ranking-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15,12,41,0.96); z-index: 1650;
+            display: none; flex-direction: column;
+            padding: 10px; touch-action: auto;
+        }
+        #ranking-overlay.show { display: flex; }
+        .ranking-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 4px; font-size: clamp(0.85rem, 2.5vw, 1.1rem); font-weight: bold;
+            color: #ffd54f; border-bottom: 1px solid rgba(255,255,255,0.15);
+            margin-bottom: 6px; gap: 6px;
+        }
+        .ranking-tabs { display: flex; gap: 4px; }
+        .rank-tab {
+            padding: 4px 10px; font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+            font-weight: bold; border-radius: 4px; cursor: pointer;
+            border: 1px solid #555; background: rgba(255,255,255,0.05);
+            color: #999; touch-action: auto; white-space: nowrap;
+        }
+        .rank-tab.active {
+            background: rgba(255,213,79,0.2); color: #ffd54f; border-color: #ffd54f;
+        }
+        .ranking-close-btn {
+            background: none; border: 1px solid #888; color: #fff;
+            width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+            font-size: 1rem; touch-action: auto;
+        }
+        .ranking-table-wrap {
+            flex: 1; overflow-y: auto; touch-action: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .ranking-table {
+            width: 100%; border-collapse: collapse;
+            font-size: clamp(0.6rem, 1.8vw, 0.78rem);
+            font-family: 'Courier New', monospace;
+        }
+        .ranking-table th {
+            background: rgba(255,255,255,0.1); padding: 5px 3px;
+            position: sticky; top: 0; color: #aab; font-weight: bold;
+            border-bottom: 1px solid #555; text-align: center;
+        }
+        .ranking-table td {
+            padding: 5px 3px; text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .ranking-table tr:nth-child(1) td { color: #ffd54f; font-weight: bold; }
+        .ranking-table tr:nth-child(2) td { color: #cfd8dc; }
+        .ranking-table tr:nth-child(3) td { color: #bcaaa4; }
+        .ranking-table .me td { background: rgba(100,181,246,0.15); }
+        .ranking-empty {
+            text-align: center; color: #666; padding: 30px;
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+        }
+
+        /* ===== 종료 화면 ===== */
+        #exit-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; z-index: 1700; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            touch-action: auto;
+        }
+        #exit-screen.show { display: flex; }
+        .exit-msg { font-size: 1.2rem; color: #888; margin-bottom: 10px; }
+        .exit-sub { font-size: 0.8rem; color: #555; }
+
+        /* ===== 상단 패널: 프로세스 ===== */
+        .process-panel {
+            flex: 55; background: linear-gradient(180deg, #1a2a3a, #243447);
+            position: relative; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            border-bottom: 3px solid #0d1b2a; padding: 4px 0;
+        }
+
+        .alarm-board {
+            position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+            width: auto; min-width: 100px; text-align: center; font-weight: bold;
+            padding: 3px 10px; border-radius: 4px; font-size: clamp(0.6rem, 1.8vw, 0.75rem);
+            background: #000; color: #0f0; border: 2px solid #0f0;
+            transition: all 0.2s; z-index: 10; white-space: nowrap;
+        }
+        .alarm-high { background: #500; color: #f00; border-color: #f00; animation: blink 1s infinite; }
+        .alarm-low { background: #500; color: #ff0; border-color: #ff0; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .attempt-badge {
+            position: absolute; top: 6px; left: 8px;
+            background: rgba(0,0,0,0.6); color: #64b5f6;
+            font-size: clamp(0.55rem, 1.6vw, 0.7rem); font-weight: bold;
+            padding: 2px 8px; border-radius: 4px; border: 1px solid #64b5f6;
+            z-index: 10; font-family: 'Courier New', monospace;
+        }
+
+        .fault-countdown-banner {
+            position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
+            background: #e67e22; color: #fff; font-weight: bold; font-size: 0.72rem;
+            padding: 3px 14px; border-radius: 4px; z-index: 12; display: none;
+            white-space: nowrap; animation: fcd-pulse 0.4s infinite alternate;
+        }
+        @keyframes fcd-pulse { from { opacity:1; transform: translateX(-50%) scale(1); } to { opacity:0.7; transform: translateX(-50%) scale(1.04); } }
+
+        .fault-banner {
+            position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
+            background: #e74c3c; color: #fff; font-weight: bold; font-size: 0.72rem;
+            padding: 3px 14px; border-radius: 4px; z-index: 12; display: none;
+            animation: fault-pulse 0.6s infinite alternate; white-space: nowrap;
+        }
+        @keyframes fault-pulse { from { opacity:1; } to { opacity:0.6; } }
+
+        .fail-timer-badge {
+            position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+            background: rgba(231,76,60,0.85); color: #fff; font-weight: bold;
+            font-size: 0.65rem; padding: 2px 10px; border-radius: 4px;
+            z-index: 12; display: none; font-family: 'Courier New', monospace; white-space: nowrap;
+        }
+
+        /* 안정 프로그레스 바 */
+        .stab-bar-box {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            width: 10px; height: 80px; background: rgba(0,0,0,0.4);
+            border: 1px solid #555; border-radius: 5px; overflow: hidden; z-index: 10;
+        }
+        .stab-bar-fill {
+            position: absolute; bottom: 0; width: 100%;
+            background: linear-gradient(to top, #2ecc71, #27ae60);
+            border-radius: 0 0 4px 4px; transition: height 0.15s linear;
+        }
+        .stab-label {
+            position: absolute; right: 6px; top: calc(50% - 56px); transform: translateY(-50%);
+            font-size: 0.45rem; color: #2ecc71; font-weight: bold; z-index: 10;
+        }
+
+        /* 프로세스 본체 */
+        .proc-body {
+            display: flex; flex-direction: column; align-items: center;
+            margin-top: clamp(6px, 1.5vh, 14px);
+        }
+        .tank {
+            width: clamp(80px, 22vw, 110px); height: clamp(90px, 18vh, 120px);
+            border: 3px solid #7f8c8d; border-top: none;
+            background: rgba(255,255,255,0.04); position: relative; overflow: hidden;
+            border-radius: 0 0 8px 8px; transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .tank.alarm { border-color: #e74c3c; }
+        .tank.stable { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46,204,113,0.5); }
+        .target-band {
+            position: absolute; width: 100%; bottom: 48%; height: 4%;
+            background: rgba(46,204,113,0.18);
+            border-top: 1px dashed rgba(46,204,113,0.5);
+            border-bottom: 1px dashed rgba(46,204,113,0.5);
+            z-index: 2; pointer-events: none;
+        }
+        .water {
+            width: 100%; height: 50%; background-color: #42a5f5;
+            position: absolute; bottom: 0;
+            transition: height 0.1s linear, background-color 0.3s;
+        }
+        .water.alarm-high { background-color: #ef5350; }
+        .water.alarm-low { background-color: #fdd835; }
+        .level-text {
+            position: absolute; width: 100%; text-align: center; top: 8px;
+            font-size: clamp(0.85rem, 2.8vw, 1.1rem); font-weight: bold; color: #fff;
+            text-shadow: 1px 1px 3px #000; z-index: 3; font-family: monospace;
+        }
+        .pipe-v { width: 16px; height: clamp(10px, 2vh, 18px); background: #78909c; }
+        .valve-assembly {
+            position: relative; display: flex; flex-direction: column; align-items: center;
+        }
+        .pipe-h {
+            width: clamp(90px, 26vw, 130px); height: 14px; background: #78909c;
+            position: absolute; bottom: 22px; z-index: 1;
+        }
+        .actuator {
+            width: clamp(32px, 9vw, 44px); height: clamp(16px, 3vh, 24px);
+            background: #e67e22; border-radius: 8px 8px 0 0; z-index: 2; margin-top: 3px;
+        }
+        .actuator.fault { background: #7f8c8d; }
+        .stem-box { width: 10px; height: 22px; background: #78909c; position: relative; z-index: 2; }
+        .stem {
+            width: 4px; height: 100%; background: #ecf0f1;
+            margin: 0 auto; position: absolute; bottom: 0; left: 3px;
+            transform-origin: bottom;
+        }
+        .valve-body { width: 48px; height: 22px; background: #c62828; border-radius: 4px; z-index: 2; }
+
+        /* ===== 하단 패널: M/A Station ===== */
+        .station-panel {
+            flex: 45; background: #c8cdd0; position: relative;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding-bottom: 30px; padding-top: 4px;
+        }
+
+        .station-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: clamp(6px, 1.5vh, 14px) clamp(10px, 4vw, 20px);
+            align-items: center; justify-items: center;
+            background: #b0b5b8; border: 2px solid #999;
+            padding: clamp(8px, 2vw, 16px); border-radius: 6px;
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.25);
+            width: min(92vw, 360px);
+        }
+        .gauge-wrapper { display: flex; flex-direction: column; align-items: center; }
+        .gauge {
+            width: clamp(60px, 16vw, 82px); height: clamp(60px, 16vw, 82px);
+            background: radial-gradient(#fff, #ddd);
+            border-radius: 50%; border: clamp(4px, 1vw, 6px) solid #888; position: relative;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.5), 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .needle {
+            width: 2px; height: 42%; background: #c0392b;
+            position: absolute; bottom: 50%; left: calc(50% - 1px);
+            transform-origin: bottom center; transition: transform 0.1s;
+        }
+        .gauge-center {
+            width: 8px; height: 8px; background: #333; border-radius: 50%;
+            position: absolute; top: calc(50% - 4px); left: calc(50% - 4px);
+        }
+        .gauge-label {
+            font-size: clamp(0.42rem, 1.3vw, 0.55rem); text-align: center;
+            margin-top: 3px; font-weight: bold; color: #444; line-height: 1.2;
+        }
+        .switch-container {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center;
+        }
+        .switch-labels {
+            display: flex; justify-content: space-between;
+            width: clamp(70px, 18vw, 90px);
+            font-size: clamp(0.58rem, 1.6vw, 0.7rem);
+            font-weight: bold; margin-bottom: 3px; color: #333;
+        }
+        .switch-bg {
+            width: clamp(56px, 14vw, 68px); height: clamp(26px, 6vw, 32px);
+            background: #555; border-radius: 15px;
+            position: relative; cursor: pointer; border: 2px solid #777;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .lever {
+            width: 8px; height: clamp(34px, 8vw, 44px);
+            background: linear-gradient(to right, #ccc, #fff, #ccc);
+            border-radius: 4px; position: absolute; transform-origin: center;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .knob-wrapper { display: flex; flex-direction: column; align-items: center; }
+        .knob {
+            width: clamp(72px, 20vw, 96px); height: clamp(72px, 20vw, 96px);
+            background: radial-gradient(#555, #222);
+            border-radius: 50%; border: 3px solid #444; position: relative;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+        }
+        .knob-indicator {
+            width: clamp(5px, 1.2vw, 7px); height: clamp(14px, 4vw, 20px);
+            background: #fff; border-radius: 3px; margin: clamp(4px, 1vw, 6px) auto 0;
+        }
+        .knob-psi {
+            font-size: clamp(0.55rem, 1.5vw, 0.68rem); color: #333; font-weight: bold;
+            margin-top: 3px; font-family: 'Courier New', monospace;
+        }
+
+        /* HUD 바 (화면 최하단) */
+        .hud-bar {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            display: flex; justify-content: space-around; align-items: center;
+            background: rgba(0,0,0,0.8); padding: clamp(3px, 1vh, 6px) 8px;
+            font-family: 'Courier New', monospace; z-index: 10;
+        }
+        .hud-item { display: flex; flex-direction: column; align-items: center; }
+        .hud-label { color: #888; font-size: clamp(0.42rem, 1.2vw, 0.52rem); margin-bottom: 1px; }
+        .hud-value { color: #0f0; font-weight: bold; font-size: clamp(0.6rem, 1.8vw, 0.75rem); }
+        .hud-value.warn { color: #f1c40f; }
+        .hud-value.danger { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+    <!-- 시작 화면 -->
+    <div id="start-overlay">
+        <h2>⚙️ M/A Station 시뮬레이터</h2>
+        <div class="mission-brief">
+            <b style="color:#64b5f6;">📋 미션 브리핑</b>
+            <p class="brief-section">시작 후 카운트다운과 함께 제어밸브 고장이 발생합니다. ▸ <strong>Fail Open</strong> 또는 <strong>Fail Close</strong> (50% 확률)</p>
+            <p class="brief-section">🎯 AUTO → MAN 전환 후 수동 조작으로 수위 <em>48~52%</em>를 <em>30초간 유지</em>하면 성공</p>
+            <p class="brief-section">⚠ 수위 0%/100%가 <strong>20초 지속</strong>시 실패</p>
+            <p class="brief-section">🏅 총 <em>3회</em> 도전 가능 — 1회차 성공 시 ×1.3 보너스, 3회차는 ×0.8</p>
+        </div>
+        <button class="start-btn" id="start-btn">▶ 시작</button>
+    </div>
+
+    <!-- 결과 -->
+    <div id="result-overlay">
+        <div class="result-title" id="result-title"></div>
+        <div class="result-detail" id="result-attempt"></div>
+        <div class="result-detail" id="result-time"></div>
+        <div class="result-detail" id="result-scenario"></div>
+        <div class="result-detail" id="result-detail2"></div>
+        <!-- 점수판 -->
+        <div class="score-board" id="score-board">
+            <div class="score-total" id="score-total"></div>
+            <div class="score-rows">
+                <div class="score-row">
+                    <span class="score-cat">⚡ 신속성</span>
+                    <span class="score-stars" id="star-speed"></span>
+                    <span class="score-pts" id="pts-speed"></span>
+                </div>
+                <div class="score-row">
+                    <span class="score-cat">🛡 안전성</span>
+                    <span class="score-stars" id="star-safety"></span>
+                    <span class="score-pts" id="pts-safety"></span>
+                </div>
+                <div class="score-row">
+                    <span class="score-cat">🎯 정밀성</span>
+                    <span class="score-stars" id="star-precision"></span>
+                    <span class="score-pts" id="pts-precision"></span>
+                </div>
+            </div>
+            <div class="score-breakdown" id="score-breakdown"></div>
+            <div class="score-bonus" id="score-bonus"></div>
+        </div>
+        <div class="result-buttons">
+            <button class="result-btn btn-retry" id="retry-btn">🔄 재도전</button>
+            <button class="result-btn btn-exit" id="exit-btn">⏹ 종료</button>
+        </div>
+        <!-- 이름 입력 + 제출 -->
+        <div class="submit-area" id="submit-area">
+            <div class="submit-row">
+                <input type="text" id="player-name" class="name-input" placeholder="이름 입력" maxlength="10" autocomplete="off">
+                <button class="result-btn btn-submit" id="submit-btn">📤 점수 제출</button>
+            </div>
+            <div class="submit-status" id="submit-status"></div>
+        </div>
+        <!-- 랭킹 토글 -->
+        <button class="ranking-toggle-btn" id="ranking-toggle-btn">🏆 랭킹 보기</button>
+    </div>
+
+    <!-- 랭킹 오버레이 (내장) -->
+    <div id="ranking-overlay">
+        <div class="ranking-header">
+            <span>🏆 랭킹</span>
+            <div class="ranking-tabs">
+                <button class="rank-tab active" id="tab-today" onclick="switchTab('today')">📅 오늘 TOP5</button>
+                <button class="rank-tab" id="tab-all" onclick="switchTab('all')">🏆 전체</button>
+            </div>
+            <button class="ranking-close-btn" id="ranking-close-btn">✕</button>
+        </div>
+        <div class="ranking-table-wrap">
+            <table class="ranking-table" id="ranking-table">
+                <thead><tr><th>#</th><th>이름</th><th>점수</th><th>회차</th><th>고장</th><th>⚡</th><th>🛡</th><th>🎯</th></tr></thead>
+                <tbody id="ranking-body"></tbody>
+            </table>
+        </div>
+        <div class="ranking-empty" id="ranking-empty">아직 제출된 점수가 없습니다.</div>
+    </div>
+
+    <!-- 종료 -->
+    <div id="exit-screen">
+        <div class="exit-msg">시뮬레이션이 종료되었습니다.</div>
+        <div class="exit-sub">브라우저를 닫거나 뒤로가기를 눌러주세요.</div>
+    </div>
+
+    <!-- ===== 상단: 프로세스 ===== -->
+    <div class="process-panel">
+        <div class="alarm-board" id="alarm-board">NORMAL</div>
+        <div class="attempt-badge" id="attempt-badge">1 / 3</div>
+        <div class="fault-countdown-banner" id="fault-cd-banner"></div>
+        <div class="fault-banner" id="fault-banner"></div>
+
+        <span class="stab-label">안정</span>
+        <div class="stab-bar-box">
+            <div class="stab-bar-fill" id="stability-fill" style="height:0%;"></div>
+        </div>
+
+        <div class="proc-body">
+            <div class="tank" id="tank-border">
+                <div class="target-band"></div>
+                <div class="level-text" id="level-text">50.0%</div>
+                <div class="water" id="water-level"></div>
+            </div>
+            <div class="pipe-v"></div>
+            <div class="valve-assembly">
+                <div class="pipe-h"></div>
+                <div class="actuator" id="actuator"></div>
+                <div class="stem-box"><div class="stem" id="valve-stem" style="transform:scaleY(0.5);"></div></div>
+                <div class="valve-body"></div>
+            </div>
+        </div>
+
+        <div class="fail-timer-badge" id="fail-timer-badge"></div>
+    </div>
+
+    <!-- ===== 하단: M/A Station ===== -->
+    <div class="station-panel">
+        <div class="station-grid">
+            <div class="gauge-wrapper">
+                <div class="gauge">
+                    <div class="needle" id="inst-needle" style="transform:rotate(0deg);"></div>
+                    <div class="gauge-center"></div>
+                </div>
+                <div class="gauge-label">INSTRUMENT<br>LOADING</div>
+            </div>
+            <div class="gauge-wrapper">
+                <div class="gauge">
+                    <div class="needle" id="man-needle" style="transform:rotate(-135deg);"></div>
+                    <div class="gauge-center"></div>
+                </div>
+                <div class="gauge-label">MANUAL<br>LOADING</div>
+            </div>
+            <div class="switch-container">
+                <div class="switch-labels"><span>AUTO</span><span>MAN</span></div>
+                <div class="switch-bg" id="selector-switch">
+                    <div class="lever" id="switch-lever" style="transform:rotate(-30deg);"></div>
+                </div>
+            </div>
+            <div class="knob-wrapper">
+                <div class="knob" id="knob" style="transform:rotate(0deg);">
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="knob-psi" id="knob-psi">3.0 psi</div>
+            </div>
+        </div>
+
+        <!-- HUD -->
+        <div class="hud-bar">
+            <div class="hud-item">
+                <span class="hud-label">경과</span>
+                <span class="hud-value" id="hud-elapsed">0.0s</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">밸브</span>
+                <span class="hud-value" id="hud-valve">50.0%</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">모드</span>
+                <span class="hud-value" id="hud-mode">AUTO</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">안정</span>
+                <span class="hud-value" id="hud-stable">0.0s</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === DOM ===
+        const startOverlay = document.getElementById('start-overlay');
+        const startBtn = document.getElementById('start-btn');
+        const resultOverlay = document.getElementById('result-overlay');
+        const resultTitle = document.getElementById('result-title');
+        const resultTime = document.getElementById('result-time');
+        const resultScenario = document.getElementById('result-scenario');
+        const resultDetail2 = document.getElementById('result-detail2');
+        const retryBtn = document.getElementById('retry-btn');
+        const exitBtn = document.getElementById('exit-btn');
+        const exitScreen = document.getElementById('exit-screen');
+        const attemptBadge = document.getElementById('attempt-badge');
+        const resultAttempt = document.getElementById('result-attempt');
+
+        const knobEl = document.getElementById('knob');
+        const knobPsiLabel = document.getElementById('knob-psi');
+        const selectorSwitch = document.getElementById('selector-switch');
+        const switchLever = document.getElementById('switch-lever');
+        const instNeedle = document.getElementById('inst-needle');
+        const manNeedle = document.getElementById('man-needle');
+        const valveStem = document.getElementById('valve-stem');
+        const waterLevel = document.getElementById('water-level');
+        const alarmBoard = document.getElementById('alarm-board');
+        const tankBorder = document.getElementById('tank-border');
+        const levelText = document.getElementById('level-text');
+        const faultBanner = document.getElementById('fault-banner');
+        const faultCdBanner = document.getElementById('fault-cd-banner');
+        const actuatorEl = document.getElementById('actuator');
+        const stabilityFill = document.getElementById('stability-fill');
+        const failTimerBadge = document.getElementById('fail-timer-badge');
+
+        const hudElapsed = document.getElementById('hud-elapsed');
+        const hudValve = document.getElementById('hud-valve');
+        const hudMode = document.getElementById('hud-mode');
+        const hudStable = document.getElementById('hud-stable');
+
+        // === 상태 ===
+        let simulationStarted = false;
+        let simStartTime = 0;
+        let isAuto = true;
+        let manualRotation = 0;
+        let manualPsi = 3.0;
+        let autoPsi = 9.0;
+        let activePsi = 9.0;
+        let targetOpen = 50.0;
+        let currentOpen = 50.0;
+        let tankLevel = 50.0;
+
+        // ★ 유량 모델 상수
+        // 등비율(Equal Percentage) 밸브, R=30
+        // + 설치특성(Installed Characteristic) 반영: 배관 마찰손실에 의한 고개도 포화
+        const VALVE_RANGEABILITY = 30;
+        const VALVE_DEADZONE = 2.0;       // 개도 2% 미만: 착좌 → 유량 0
+        const VALVE_DP_RATIO = 0.15;      // 밸브 차압 / 계통 전체 차압 (15%)
+        // 설치특성 적용 시 50% 개도 평형 유량 = 43.3
+        const INFLOW = 43.3;
+        const FLOW_RATE = 0.0076;         // 유속계수 (설치특성 스케일에 맞게 조정)
+
+        let faultType = null;
+        let faultTriggered = false;
+        let faultTime = 0;
+
+        let stableStartTime = null;
+        let stableDuration = 0;
+        const STABLE_LOW = 48.0;
+        const STABLE_HIGH = 52.0;
+        const STABLE_REQUIRED = 30.0;
+        let missionComplete = false;
+        let missionFailed = false;
+
+        const FAIL_HOLD_REQUIRED = 20.0;
+        let failHoldStart = null;
+        let failHoldDuration = 0;
+
+        let isDragging = false;
+        let previousAngle = 0;
+        let centerX, centerY;
+        let simInterval = null;
+        let faultCountdownTimer = null;
+        let stableLevelSamples = [];
+
+        // === 점수 추적 변수 ===
+        let manSwitchTime = null;
+        let firstStableTime = null;
+        let alarmCumulative = 0;
+        let extremeEntries = 0;
+        let wasInExtreme = false;
+        let hitLimit = false;
+        let maxOvershoot = 0;
+
+        // === 회차 관리 ===
+        const MAX_ATTEMPTS = 3;
+        const ATTEMPT_MULTIPLIERS = [1.3, 1.0, 0.8];
+        let currentAttempt = 1;
+
+        // === 유틸 ===
+        function triggerHaptic(d) { if (navigator.vibrate) navigator.vibrate(d); }
+        function formatTime(s) {
+            let m = Math.floor(s / 60);
+            let sec = (s % 60).toFixed(1);
+            return m > 0 ? `${m}분 ${sec}초` : `${sec}초`;
+        }
+
+        // ★ 밸브 유량 계산: 고유특성(Equal%) + 설치특성(Installed)
+        // 고유특성: Q = R^(x-1), R=30
+        // 설치특성: 배관 저항으로 인해 고개도에서 유량 포화
+        //   공식: Qi = Q_inherent / √(1 + k·Q_inherent²), k = (1/r) - 1
+        //   결과: 75%→77%, 90%→94%, 95%→97% (전유량 대비)
+        const _k = (1 / VALVE_DP_RATIO) - 1;                        // 계통 저항계수
+        const _qMaxInst = 1.0 / Math.sqrt(1 + _k);                  // 100%개도 설치유량(정규화)
+        function calcOutflow(openPercent) {
+            if (openPercent < VALVE_DEADZONE) return 0;              // 착좌: 유출 0
+            let x = openPercent / 100;
+            let qI = Math.pow(VALVE_RANGEABILITY, x - 1);           // 고유특성 (0~1)
+            let qInst = qI / Math.sqrt(1 + _k * qI * qI);          // 설치특성
+            return (qInst / _qMaxInst) * 100;                       // 0~100 스케일
+        }
+
+        // === 리셋 ===
+        function resetSimulation() {
+            simulationStarted = false;
+            isAuto = true; manualRotation = 0; manualPsi = 3.0;
+            autoPsi = 9.0; activePsi = 9.0;
+            targetOpen = 50.0; currentOpen = 50.0; tankLevel = 50.0;
+            faultType = null; faultTriggered = false; faultTime = 0;
+            stableStartTime = null; stableDuration = 0;
+            missionComplete = false; missionFailed = false;
+            failHoldStart = null; failHoldDuration = 0;
+            stableLevelSamples = [];
+            manSwitchTime = null; firstStableTime = null;
+            alarmCumulative = 0; extremeEntries = 0;
+            wasInExtreme = false; hitLimit = false; maxOvershoot = 0;
+
+            switchLever.style.transform = 'rotate(-30deg)';
+            knobEl.style.transform = 'rotate(0deg)';
+            knobPsiLabel.textContent = '3.0 psi';
+            faultBanner.style.display = 'none';
+            faultCdBanner.style.display = 'none';
+            failTimerBadge.style.display = 'none';
+            actuatorEl.classList.remove('fault');
+            tankBorder.classList.remove('stable', 'alarm');
+            waterLevel.classList.remove('alarm-high', 'alarm-low');
+            stabilityFill.style.height = '0%';
+            resultOverlay.className = '';
+            resultOverlay.style.display = 'none';
+            document.getElementById('score-board').style.display = 'none';
+            retryBtn.style.display = '';
+            alarmBoard.className = 'alarm-board';
+            alarmBoard.innerText = 'NORMAL';
+            levelText.innerText = '50.0%';
+            waterLevel.style.height = '50%';
+            valveStem.style.transform = 'scaleY(0.5)';
+
+            hudElapsed.textContent = '0.0s';
+            hudValve.textContent = '50.0%';
+            hudMode.textContent = 'AUTO';
+            hudMode.style.color = '#42a5f5';
+            hudStable.textContent = '0.0s';
+            hudStable.className = 'hud-value';
+
+            if (simInterval) { clearInterval(simInterval); simInterval = null; }
+            if (faultCountdownTimer) { clearInterval(faultCountdownTimer); faultCountdownTimer = null; }
+        }
+
+        // === 시작 ===
+        startBtn.addEventListener('click', () => {
+            const el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            startOverlay.style.display = 'none';
+            currentAttempt = 1;
+            attemptBadge.textContent = `${currentAttempt} / ${MAX_ATTEMPTS}`;
+            startSim();
+        });
+
+        retryBtn.addEventListener('click', () => {
+            if (currentAttempt >= MAX_ATTEMPTS) return;
+            currentAttempt++;
+            resetSimulation();
+            attemptBadge.textContent = `${currentAttempt} / ${MAX_ATTEMPTS}`;
+            startSim();
+        });
+
+        exitBtn.addEventListener('click', () => {
+            resultOverlay.style.display = 'none';
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            exitScreen.classList.add('show');
+        });
+
+        function startSim() {
+            simulationStarted = true;
+            simStartTime = performance.now();
+            faultType = Math.random() < 0.5 ? 'open' : 'close';
+            faultTriggered = false;
+
+            // 고장 전 카운트다운
+            let fc = 3;
+            faultCdBanner.style.display = 'block';
+            faultCdBanner.textContent = `⚠ 고장 발생까지 ${fc}...`;
+
+            faultCountdownTimer = setInterval(() => {
+                fc--;
+                if (fc > 0) {
+                    faultCdBanner.textContent = `⚠ 고장 발생까지 ${fc}...`;
+                    triggerHaptic(30);
+                } else {
+                    clearInterval(faultCountdownTimer);
+                    faultCountdownTimer = null;
+                    faultCdBanner.style.display = 'none';
+                    faultTriggered = true;
+                    faultTime = performance.now();
+                    faultBanner.textContent = faultType === 'open'
+                        ? '⚠ FAIL OPEN — 밸브 완전 개방'
+                        : '⚠ FAIL CLOSE — 밸브 완전 폐쇄';
+                    faultBanner.style.display = 'block';
+                    actuatorEl.classList.add('fault');
+                    triggerHaptic([100, 50, 100, 50, 100]);
+                }
+            }, 1000);
+
+            simInterval = setInterval(updatePhysics, 50);
+        }
+
+        // === 조작 ===
+        selectorSwitch.addEventListener('pointerdown', (e) => {
+            if (!simulationStarted || missionComplete || missionFailed) return;
+            e.preventDefault();
+            isAuto = !isAuto;
+            switchLever.style.transform = isAuto ? 'rotate(-30deg)' : 'rotate(30deg)';
+            // 점수: 고장 후 최초 MAN 전환 시각 기록
+            if (!isAuto && faultTriggered && !manSwitchTime) {
+                manSwitchTime = performance.now();
+            }
+            triggerHaptic(50);
+        });
+
+        knobEl.addEventListener('pointerdown', (e) => {
+            if (!simulationStarted || missionComplete || missionFailed) return;
+            isDragging = true;
+            const r = knobEl.getBoundingClientRect();
+            centerX = r.left + r.width / 2;
+            centerY = r.top + r.height / 2;
+            previousAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+            e.preventDefault();
+            knobEl.setPointerCapture(e.pointerId);
+        });
+
+        knobEl.addEventListener('pointermove', (e) => {
+            if (!isDragging || !simulationStarted || missionComplete || missionFailed) return;
+            let cur = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+            let delta = cur - previousAngle;
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+
+            manualRotation += delta;
+            if (manualRotation <= 0) { manualRotation = 0; triggerHaptic(50); }
+            else if (manualRotation >= 1080) { manualRotation = 1080; triggerHaptic(50); }
+            else if (Math.abs(delta) > 1) { triggerHaptic(5); }
+
+            previousAngle = cur;
+            knobEl.style.transform = `rotate(${manualRotation}deg)`;
+            manualPsi = 3.0 + (manualRotation / 1080) * 12.0;
+            knobPsiLabel.textContent = manualPsi.toFixed(1) + ' psi';
+        });
+
+        knobEl.addEventListener('pointerup', () => { isDragging = false; });
+        knobEl.addEventListener('pointercancel', () => { isDragging = false; });
+
+        // === 물리엔진 ===
+        function updatePhysics() {
+            if (!simulationStarted || missionComplete || missionFailed) return;
+            const elapsed = (performance.now() - simStartTime) / 1000;
+
+            // Auto 컨트롤러
+            if (isAuto && !faultTriggered) {
+                autoPsi = 9.0 + ((tankLevel - 50.0) * 0.5);
+                autoPsi = Math.max(3, Math.min(15, autoPsi));
+            }
+
+            // 고장 로직
+            if (faultTriggered && isAuto) {
+                activePsi = faultType === 'open' ? 15.0 : 3.0;
+                autoPsi = activePsi;
+            } else if (faultTriggered && !isAuto) {
+                activePsi = manualPsi;
+            } else {
+                activePsi = isAuto ? autoPsi : manualPsi;
+            }
+
+            targetOpen = ((activePsi - 3) / 12) * 100;
+
+            let maxStep = 2.5;
+            if (currentOpen < targetOpen) currentOpen = Math.min(currentOpen + maxStep, targetOpen);
+            else if (currentOpen > targetOpen) currentOpen = Math.max(currentOpen - maxStep, targetOpen);
+
+            valveStem.style.transform = `scaleY(${currentOpen / 100})`;
+
+            // ★ 수정된 유량 모델: 착좌 영역(2% 미만) → 유출 0
+            let outflow = calcOutflow(currentOpen);
+            let flowNet = INFLOW - outflow;
+            tankLevel += flowNet * FLOW_RATE;
+            if (tankLevel > 100) tankLevel = 100;
+            if (tankLevel < 0) tankLevel = 0;
+
+            // 디스플레이
+            levelText.innerText = tankLevel.toFixed(1) + '%';
+            waterLevel.style.height = `${tankLevel}%`;
+
+            let inStable = (tankLevel >= STABLE_LOW && tankLevel <= STABLE_HIGH);
+
+            // === 점수 추적 (고장 발생 후만) ===
+            if (faultTriggered) {
+                // 알람구간 누적 (50ms = 0.05s 단위)
+                if (tankLevel <= 20 || tankLevel >= 80) alarmCumulative += 0.05;
+                // 극한구간 진입 횟수
+                let inExtreme = (tankLevel <= 5 || tankLevel >= 95);
+                if (inExtreme && !wasInExtreme) extremeEntries++;
+                wasInExtreme = inExtreme;
+                // 극한 도달
+                if (tankLevel <= 0.1 || tankLevel >= 99.9) hitLimit = true;
+                // 최초 안정구간 진입 시각
+                if (inStable && !firstStableTime) firstStableTime = performance.now();
+                // 최대 오버슈트 (50%로부터 편차)
+                let overshoot = Math.abs(tankLevel - 50.0);
+                if (overshoot > maxOvershoot) maxOvershoot = overshoot;
+            }
+
+            // 알람 + 안정구간 초록 테두리
+            if (tankLevel >= 80) {
+                alarmBoard.className = 'alarm-board alarm-high'; alarmBoard.innerText = 'HIGH ALARM';
+                tankBorder.classList.add('alarm'); tankBorder.classList.remove('stable');
+                waterLevel.classList.add('alarm-high'); waterLevel.classList.remove('alarm-low');
+            } else if (tankLevel <= 20) {
+                alarmBoard.className = 'alarm-board alarm-low'; alarmBoard.innerText = 'LOW ALARM';
+                tankBorder.classList.add('alarm'); tankBorder.classList.remove('stable');
+                waterLevel.classList.add('alarm-low'); waterLevel.classList.remove('alarm-high');
+            } else {
+                alarmBoard.className = 'alarm-board'; alarmBoard.innerText = 'NORMAL';
+                tankBorder.classList.remove('alarm');
+                waterLevel.classList.remove('alarm-high', 'alarm-low');
+                if (inStable && faultTriggered) tankBorder.classList.add('stable');
+                else tankBorder.classList.remove('stable');
+            }
+
+            // 게이지
+            instNeedle.style.transform = `rotate(${-135 + ((autoPsi - 3) / 12) * 270}deg)`;
+            manNeedle.style.transform = `rotate(${-135 + ((manualPsi - 3) / 12) * 270}deg)`;
+
+            // HUD
+            hudElapsed.textContent = formatTime(elapsed);
+            hudValve.textContent = currentOpen.toFixed(1) + '%';
+            hudMode.textContent = isAuto ? 'AUTO' : 'MAN';
+            hudMode.style.color = isAuto ? '#42a5f5' : '#e67e22';
+
+            // 안정 판정
+            if (faultTriggered) {
+                if (inStable) {
+                    if (!stableStartTime) stableStartTime = performance.now();
+                    stableDuration = (performance.now() - stableStartTime) / 1000;
+                    stableLevelSamples.push(tankLevel);
+                } else {
+                    stableStartTime = null;
+                    stableDuration = 0;
+                    stableLevelSamples = [];
+                }
+
+                hudStable.textContent = stableDuration.toFixed(1) + 's';
+                hudStable.className = 'hud-value' + (stableDuration >= 20 ? ' warn' : '');
+                stabilityFill.style.height = Math.min(100, (stableDuration / STABLE_REQUIRED) * 100) + '%';
+
+                if (stableDuration >= STABLE_REQUIRED) {
+                    missionComplete = true;
+                    showResult(true, (performance.now() - simStartTime) / 1000);
+                    return;
+                }
+            }
+
+            // 실패 판정: 0% 또는 100% 20초 유지
+            if (faultTriggered) {
+                if (tankLevel <= 0.1 || tankLevel >= 99.9) {
+                    if (!failHoldStart) failHoldStart = performance.now();
+                    failHoldDuration = (performance.now() - failHoldStart) / 1000;
+                    failTimerBadge.style.display = 'block';
+                    failTimerBadge.textContent = `⚠ 위험 지속: ${failHoldDuration.toFixed(1)}s / ${FAIL_HOLD_REQUIRED}s`;
+                } else {
+                    failHoldStart = null;
+                    failHoldDuration = 0;
+                    failTimerBadge.style.display = 'none';
+                }
+
+                if (failHoldDuration >= FAIL_HOLD_REQUIRED) {
+                    missionFailed = true;
+                    showResult(false, (performance.now() - simStartTime) / 1000);
+                }
+            }
+        }
+
+        // === 점수 계산 ===
+        function calcScore(success, totalSec) {
+            const s = {};
+
+            // --- 신속성 4,500점 ---
+            // (1) 초기 대응: 고장→MAN 전환 (1500점, 3초 이내 만점, 15초 이상 0점)
+            let responseTime = manSwitchTime
+                ? (manSwitchTime - faultTime) / 1000 : 999;
+            s.response = Math.max(0, 1500 * (1 - Math.max(0, responseTime - 3) / 12));
+            s.responseTime = responseTime;
+
+            // (2) 수위 복구: 고장→최초 48~52% 진입 (1500점, 15초 이내 만점, 60초 이상 0점)
+            let recoveryTime = firstStableTime
+                ? (firstStableTime - faultTime) / 1000 : 999;
+            s.recovery = Math.max(0, 1500 * (1 - Math.max(0, recoveryTime - 15) / 45));
+            s.recoveryTime = recoveryTime;
+
+            // (3) 총 소요 시간 (1500점, 45초 이내 만점, 120초 이상 0점)
+            s.totalTime = Math.max(0, 1500 * (1 - Math.max(0, totalSec - 45) / 75));
+            s.totalSec = totalSec;
+
+            s.speed = Math.round(s.response + s.recovery + s.totalTime);
+
+            // --- 안전성 3,500점 ---
+            // (1) 알람구간 누적 (1500점, 0초 만점, 30초 이상 0점)
+            s.alarmPts = Math.max(0, 1500 * (1 - Math.min(alarmCumulative, 30) / 30));
+            s.alarmSec = alarmCumulative;
+
+            // (2) 극한구간 진입 (1000점, 0회 만점, 5회 이상 0점)
+            s.extremePts = Math.max(0, 1000 * (1 - Math.min(extremeEntries, 5) / 5));
+            s.extremeN = extremeEntries;
+
+            // (3) 극한 도달 여부 (1000점, 미도달 만점, 도달 시 0점)
+            s.limitPts = hitLimit ? 0 : 1000;
+
+            s.safety = Math.round(s.alarmPts + s.extremePts + s.limitPts);
+
+            // --- 정밀성 2,000점 (성공 시만) ---
+            if (success && stableLevelSamples.length > 0) {
+                let avg = stableLevelSamples.reduce((a, b) => a + b) / stableLevelSamples.length;
+                let dev = Math.abs(avg - 50.0);
+                let variance = stableLevelSamples.reduce((sum, v) => sum + (v - avg) ** 2, 0) / stableLevelSamples.length;
+                let stddev = Math.sqrt(variance);
+                let maxAmp = Math.max(...stableLevelSamples.map(v => Math.abs(v - 50.0)));
+
+                // (1) 평균 편차 (800점, 0 만점, 2% 이상 0점)
+                s.devPts = Math.max(0, 800 * (1 - Math.min(dev, 2) / 2));
+                // (2) 최대 진폭 (600점, 0 만점, 2% 이상 0점)
+                s.ampPts = Math.max(0, 600 * (1 - Math.min(maxAmp, 2) / 2));
+                // (3) 표준편차 (600점, 0 만점, 1% 이상 0점)
+                s.stdPts = Math.max(0, 600 * (1 - Math.min(stddev, 1) / 1));
+
+                s.avgLevel = avg; s.dev = dev; s.stddev = stddev; s.maxAmp = maxAmp;
+            } else {
+                s.devPts = 0; s.ampPts = 0; s.stdPts = 0;
+                s.avgLevel = 0; s.dev = 0; s.stddev = 0; s.maxAmp = 0;
+            }
+            s.precision = Math.round(s.devPts + s.ampPts + s.stdPts);
+
+            s.total = s.speed + s.safety + s.precision;
+            if (!success) s.total = Math.round(s.total * 0.3);
+
+            return s;
+        }
+
+        function toStars(score, maxScore) {
+            let ratio = maxScore > 0 ? score / maxScore : 0;
+            let full = Math.floor(ratio * 5);
+            let half = (ratio * 5 - full) >= 0.4 ? 1 : 0;
+            let empty = 5 - full - half;
+            return '★'.repeat(full) + (half ? '☆' : '') + '·'.repeat(empty);
+        }
+
+        // === 결과 ===
+        function showResult(success, totalSec) {
+            if (simInterval) { clearInterval(simInterval); simInterval = null; }
+            if (faultCountdownTimer) { clearInterval(faultCountdownTimer); faultCountdownTimer = null; }
+            triggerHaptic(success ? [50, 100, 50, 100, 50] : [300, 100, 300]);
+
+            const sc = calcScore(success, totalSec);
+            const mult = ATTEMPT_MULTIPLIERS[currentAttempt - 1];
+            const baseTotal = sc.total;
+            const finalTotal = Math.round(baseTotal * mult);
+            const isGameOver = !success && currentAttempt >= MAX_ATTEMPTS;
+
+            resultOverlay.className = success ? 'success' : 'fail';
+            resultOverlay.style.display = 'flex';
+
+            if (isGameOver) {
+                resultTitle.textContent = '🚫 도전 종료';
+            } else {
+                resultTitle.textContent = success ? '🎉 미션 성공!' : '💥 미션 실패';
+            }
+
+            // 회차 표시
+            resultAttempt.textContent = `${currentAttempt}회차 도전` +
+                (success ? ` (×${mult} 보너스)` : isGameOver ? ' — 3회 모두 소진' : ` — 남은 기회: ${MAX_ATTEMPTS - currentAttempt}회`);
+
+            resultTime.textContent = `⏱ 소요 시간: ${formatTime(totalSec)}`;
+            resultScenario.textContent = `고장 유형: ${faultType === 'open' ? 'Fail Open (밸브 완전 개방)' : 'Fail Close (밸브 완전 폐쇄)'}`;
+
+            if (success) {
+                resultDetail2.textContent = '48~52% 범위에서 30초간 수위를 안정적으로 유지했습니다.';
+            } else {
+                resultDetail2.textContent = tankLevel >= 99.9
+                    ? `수위 100%가 ${FAIL_HOLD_REQUIRED}초간 지속 — 오버플로 발생`
+                    : `수위 0%가 ${FAIL_HOLD_REQUIRED}초간 지속 — 탱크 고갈`;
+            }
+
+            // 점수판
+            const board = document.getElementById('score-board');
+            board.style.display = 'block';
+
+            document.getElementById('score-total').textContent =
+                `${finalTotal.toLocaleString()} / 10,000점`;
+            document.getElementById('star-speed').textContent = toStars(sc.speed, 4500);
+            document.getElementById('pts-speed').textContent = `${sc.speed.toLocaleString()}/4,500`;
+            document.getElementById('star-safety').textContent = toStars(sc.safety, 3500);
+            document.getElementById('pts-safety').textContent = `${sc.safety.toLocaleString()}/3,500`;
+            document.getElementById('star-precision').textContent = toStars(sc.precision, 2000);
+            document.getElementById('pts-precision').textContent = `${sc.precision.toLocaleString()}/2,000`;
+
+            // 세부 내역
+            let bd = '';
+            bd += `초기대응 ${sc.responseTime < 900 ? sc.responseTime.toFixed(1) + 's' : '-'}`;
+            bd += ` | 복구 ${sc.recoveryTime < 900 ? sc.recoveryTime.toFixed(1) + 's' : '-'}`;
+            bd += ` | 알람구간 ${sc.alarmSec.toFixed(1)}s`;
+            bd += ` | 극한진입 ${sc.extremeN}회`;
+            if (success) {
+                bd += `\n편차 ±${sc.dev.toFixed(2)}% | σ ${sc.stddev.toFixed(2)}% | 진폭 ${sc.maxAmp.toFixed(2)}%`;
+            }
+            document.getElementById('score-breakdown').textContent = bd;
+
+            // 회차 보너스 표시
+            const bonusEl = document.getElementById('score-bonus');
+            if (mult > 1.0) {
+                bonusEl.className = 'score-bonus bonus-positive';
+                bonusEl.textContent = `🏅 ${currentAttempt}회차 보너스 ×${mult} → 기본 ${baseTotal.toLocaleString()} × ${mult} = ${finalTotal.toLocaleString()}점`;
+            } else if (mult < 1.0) {
+                bonusEl.className = 'score-bonus bonus-negative';
+                bonusEl.textContent = `${currentAttempt}회차 감산 ×${mult} → 기본 ${baseTotal.toLocaleString()} × ${mult} = ${finalTotal.toLocaleString()}점`;
+            } else {
+                bonusEl.className = 'score-bonus bonus-neutral';
+                bonusEl.textContent = `${currentAttempt}회차 기본 배율 ×${mult}`;
+            }
+
+            // 버튼 제어: 성공 또는 3회 소진 시 재도전 숨김
+            if (success || isGameOver) {
+                retryBtn.style.display = 'none';
+            } else {
+                retryBtn.style.display = '';
+                retryBtn.textContent = `🔄 ${currentAttempt + 1}회차 도전`;
+            }
+        }
+    </script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        // ★★★ Firebase 설정 — 나중에 본인 프로젝트 config로 교체 ★★★
+        const firebaseConfig = {
+            apiKey: "AIzaSyAyEMHjR_ocjTxT7yZs5K95PWtjTpbWUNs",
+            authDomain: "filter-simulator.firebaseapp.com",
+            databaseURL: "https://ma-station-cb4b9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "filter-simulator",
+            storageBucket: "filter-simulator.firebasestorage.app",
+            messagingSenderId: "636862608696",
+            appId: "1:636862608696:web:6630ad47f17dfba6287dcd"
+        };
+
+        let firebaseReady = false;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            firebaseReady = true;
+        } catch (e) {
+            console.warn('Firebase 초기화 실패:', e);
+        }
+
+        const DB_PATH = 'ma_station_rankings';
+
+        // === DOM ===
+        const playerNameInput = document.getElementById('player-name');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitStatus = document.getElementById('submit-status');
+        const submitArea = document.getElementById('submit-area');
+        const rankingToggleBtn = document.getElementById('ranking-toggle-btn');
+        const rankingOverlay = document.getElementById('ranking-overlay');
+        const rankingCloseBtn = document.getElementById('ranking-close-btn');
+        const rankingBody = document.getElementById('ranking-body');
+        const rankingEmpty = document.getElementById('ranking-empty');
+
+        let lastSubmittedScore = null; // 제출된 점수 데이터
+        let mySubmitKey = null;        // 내 Firebase key
+
+        // === 점수 제출 ===
+        submitBtn.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            if (!name) {
+                submitStatus.textContent = '⚠ 이름을 입력해주세요';
+                submitStatus.style.color = '#ef5350';
+                playerNameInput.focus();
+                return;
+            }
+            if (!firebaseReady) {
+                submitStatus.textContent = '⚠ Firebase 미설정 — config를 확인하세요';
+                submitStatus.style.color = '#ef5350';
+                return;
+            }
+            if (!lastSubmittedScore) return;
+
+            submitBtn.textContent = '전송 중...';
+            submitBtn.style.pointerEvents = 'none';
+
+            const data = {
+                name: name,
+                score: lastSubmittedScore.finalTotal,
+                baseScore: lastSubmittedScore.baseTotal,
+                attempt: lastSubmittedScore.attempt,
+                multiplier: lastSubmittedScore.multiplier,
+                faultType: lastSubmittedScore.faultType,
+                speed: lastSubmittedScore.speed,
+                safety: lastSubmittedScore.safety,
+                precision: lastSubmittedScore.precision,
+                success: lastSubmittedScore.success,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            const ref = firebase.database().ref(DB_PATH).push();
+            mySubmitKey = ref.key;
+            ref.set(data).then(() => {
+                submitBtn.textContent = '✅ 제출 완료';
+                submitBtn.classList.add('done');
+                submitStatus.textContent = `"${name}" 님의 점수가 등록되었습니다`;
+                submitStatus.style.color = '#66bb6a';
+                playerNameInput.disabled = true;
+            }).catch(err => {
+                submitBtn.textContent = '📤 점수 제출';
+                submitBtn.style.pointerEvents = '';
+                submitStatus.textContent = '⚠ 전송 실패: ' + err.message;
+                submitStatus.style.color = '#ef5350';
+            });
+        });
+
+        // === 랭킹 보기 ===
+        let currentTab = 'today';
+        let allEntries = [];
+
+        rankingToggleBtn.addEventListener('click', () => {
+            rankingOverlay.classList.add('show');
+            loadRanking();
+        });
+
+        rankingCloseBtn.addEventListener('click', () => {
+            rankingOverlay.classList.remove('show');
+        });
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-today').classList.toggle('active', tab === 'today');
+            document.getElementById('tab-all').classList.toggle('active', tab === 'all');
+            renderRanking();
+        }
+
+        function getTodayStartKST() {
+            // 한국시간(KST=UTC+9) 기준 오늘 00:00:00 의 UTC timestamp
+            const now = new Date();
+            const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+            const y = kst.getUTCFullYear(), m = kst.getUTCMonth(), d = kst.getUTCDate();
+            return new Date(Date.UTC(y, m, d) - 9 * 60 * 60 * 1000).getTime();
+        }
+
+        function loadRanking() {
+            if (!firebaseReady) {
+                rankingBody.innerHTML = '';
+                rankingEmpty.textContent = 'Firebase 미설정 — config를 확인하세요';
+                rankingEmpty.style.display = 'block';
+                return;
+            }
+
+            firebase.database().ref(DB_PATH)
+                .orderByChild('score')
+                .limitToLast(100)
+                .once('value')
+                .then(snap => {
+                    allEntries = [];
+                    snap.forEach(child => {
+                        allEntries.push({ key: child.key, ...child.val() });
+                    });
+                    allEntries.sort((a, b) => b.score - a.score);
+                    renderRanking();
+                })
+                .catch(err => {
+                    rankingEmpty.textContent = '데이터 로드 실패: ' + err.message;
+                    rankingEmpty.style.display = 'block';
+                });
+        }
+
+        function renderRanking() {
+            rankingBody.innerHTML = '';
+
+            let entries;
+            if (currentTab === 'today') {
+                const todayStart = getTodayStartKST();
+                entries = allEntries.filter(e => e.timestamp >= todayStart).slice(0, 5);
+            } else {
+                entries = allEntries.slice(0, 50);
+            }
+
+            if (entries.length === 0) {
+                rankingEmpty.style.display = 'block';
+                rankingEmpty.textContent = currentTab === 'today'
+                    ? '오늘 제출된 점수가 없습니다.' : '아직 제출된 점수가 없습니다.';
+                return;
+            }
+            rankingEmpty.style.display = 'none';
+
+            entries.forEach((e, i) => {
+                const tr = document.createElement('tr');
+                if (e.key === mySubmitKey) tr.classList.add('me');
+
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+                const ft = e.faultType === 'open' ? 'F/O' : 'F/C';
+                const mult = e.multiplier > 1 ? `${e.attempt}↑` : e.multiplier < 1 ? `${e.attempt}↓` : `${e.attempt}`;
+
+                tr.innerHTML = `
+                    <td>${medal}</td>
+                    <td>${e.name}${e.success ? '' : ' ✗'}</td>
+                    <td><b>${e.score.toLocaleString()}</b></td>
+                    <td>${mult}</td>
+                    <td>${ft}</td>
+                    <td>${e.speed.toLocaleString()}</td>
+                    <td>${e.safety.toLocaleString()}</td>
+                    <td>${e.precision.toLocaleString()}</td>
+                `;
+                rankingBody.appendChild(tr);
+            });
+        }
+
+        // === showResult에서 점수 데이터 저장 (기존 함수 확장) ===
+        const _origShowResult = showResult;
+        showResult = function(success, totalSec) {
+            _origShowResult(success, totalSec);
+
+            // 제출용 데이터 저장
+            const sc = calcScore(success, totalSec);
+            const mult = ATTEMPT_MULTIPLIERS[currentAttempt - 1];
+            lastSubmittedScore = {
+                finalTotal: Math.round(sc.total * mult),
+                baseTotal: sc.total,
+                attempt: currentAttempt,
+                multiplier: mult,
+                faultType: faultType,
+                speed: sc.speed,
+                safety: sc.safety,
+                precision: sc.precision,
+                success: success
+            };
+
+            // 제출 영역 리셋
+            submitBtn.textContent = '📤 점수 제출';
+            submitBtn.classList.remove('done');
+            submitBtn.style.pointerEvents = '';
+            submitStatus.textContent = '';
+            playerNameInput.disabled = false;
+            submitArea.style.display = '';
+            mySubmitKey = null;
+        };
+    </script>
+</body>
+</html>
