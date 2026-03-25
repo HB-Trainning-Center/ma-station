@@ -50,8 +50,9 @@
         #result-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 1600; display: none; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 20px; touch-action: auto;
+            align-items: center; justify-content: flex-start;
+            padding: 12px 20px; touch-action: auto;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
         #result-overlay.success { background: rgba(39,174,96,0.94); display: flex; }
         #result-overlay.fail { background: rgba(192,57,43,0.94); display: flex; }
@@ -415,193 +416,9 @@
         .hud-value.warn { color: #f1c40f; }
         .hud-value.danger { color: #e74c3c; }
 
-        /* ===== 모드 선택 화면 ===== */
-        #mode-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #0a0a1a, #1a1a3e, #0d0d2b);
-            z-index: 2000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 16px;
-            touch-action: auto; padding: 20px;
-        }
-        .mode-title {
-            font-size: clamp(1.3rem, 4vw, 1.8rem); font-weight: bold;
-            color: #64b5f6; margin-bottom: 8px; text-align: center;
-        }
-        .mode-sub { font-size: clamp(0.65rem, 2vw, 0.85rem); color: #78909c; margin-bottom: 12px; }
-        .mode-buttons { display: flex; flex-direction: column; gap: 12px; width: min(80vw, 300px); }
-        .mode-btn {
-            padding: 16px 20px; font-size: clamp(1rem, 3vw, 1.2rem); font-weight: bold;
-            border: 2px solid; border-radius: 12px; cursor: pointer;
-            text-align: center; touch-action: auto;
-        }
-        .mode-btn-student {
-            background: linear-gradient(135deg, #42a5f5, #1e88e5);
-            border-color: #42a5f5; color: #fff;
-            box-shadow: 0 4px 16px rgba(66,165,245,0.3);
-        }
-        .mode-btn-teacher {
-            background: rgba(255,213,79,0.08);
-            border-color: rgba(255,213,79,0.4); color: #ffd54f;
-        }
-
-        /* 비밀번호 모달 */
-        #pw-modal {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2100;
-            display: none; flex-direction: column;
-            align-items: center; justify-content: center;
-            touch-action: auto; gap: 10px;
-        }
-        #pw-modal.show { display: flex; }
-        .pw-label { font-size: clamp(0.9rem, 2.5vw, 1.1rem); color: #ffd54f; font-weight: bold; }
-        .pw-input {
-            padding: 12px 16px; font-size: clamp(1.1rem, 3vw, 1.4rem);
-            width: min(70vw, 260px); text-align: center; font-weight: bold;
-            border: 2px solid #555; border-radius: 8px;
-            background: rgba(255,255,255,0.1); color: #fff;
-            touch-action: auto; user-select: text; -webkit-user-select: text;
-            -webkit-text-security: disc;
-        }
-        .pw-input:focus { border-color: #ffd54f; outline: none; }
-        .pw-buttons { display: flex; gap: 10px; }
-        .pw-btn {
-            padding: 10px 24px; font-size: clamp(0.8rem, 2vw, 0.95rem);
-            font-weight: bold; border-radius: 6px; cursor: pointer;
-            border: 1px solid; touch-action: auto;
-        }
-        .pw-btn-ok { background: rgba(255,213,79,0.2); border-color: #ffd54f; color: #ffd54f; }
-        .pw-btn-cancel { background: rgba(255,255,255,0.1); border-color: #666; color: #999; }
-        .pw-error { font-size: clamp(0.7rem, 2vw, 0.82rem); color: #ef5350; min-height: 1.2em; }
-
-        /* ===== 교수자 랭킹 전체화면 ===== */
-        #teacher-ranking {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0d0d2b 100%);
-            z-index: 1900; display: none; flex-direction: column;
-            padding: clamp(10px, 2vw, 20px); touch-action: auto;
-            overflow: hidden;
-        }
-        #teacher-ranking.show { display: flex; }
-        .tr-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding-bottom: 8px; border-bottom: 2px solid rgba(255,213,79,0.2);
-            margin-bottom: 8px; flex-shrink: 0;
-        }
-        .tr-title {
-            font-size: clamp(1rem, 3vw, 1.6rem); font-weight: bold; color: #ffd54f;
-        }
-        .tr-live { font-size: clamp(0.6rem, 1.5vw, 0.8rem); color: #78909c; }
-        .tr-live-dot {
-            display: inline-block; width: 8px; height: 8px;
-            background: #4caf50; border-radius: 50%; margin-right: 4px;
-            animation: live-p 1.5s infinite;
-        }
-        @keyframes live-p { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
-        .tr-header-btns { display: flex; gap: 6px; }
-        .tr-hbtn {
-            padding: 6px 12px; font-size: clamp(0.6rem, 1.5vw, 0.75rem);
-            font-weight: bold; border-radius: 4px; cursor: pointer;
-            border: 1px solid; touch-action: auto;
-        }
-        .tr-hbtn-tab { background: rgba(255,255,255,0.05); border-color: #555; color: #999; }
-        .tr-hbtn-tab.active { background: rgba(255,213,79,0.15); border-color: #ffd54f; color: #ffd54f; }
-        .tr-hbtn-exit { background: rgba(255,255,255,0.05); border-color: #666; color: #999; }
-        .tr-hbtn-clear { background: rgba(239,83,80,0.1); border-color: rgba(239,83,80,0.4); color: #ef5350; }
-
-        .tr-stats {
-            display: flex; justify-content: center; gap: clamp(10px, 3vw, 30px);
-            padding: 8px 0; flex-shrink: 0; flex-wrap: wrap;
-        }
-        .tr-stat {
-            text-align: center; background: rgba(255,255,255,0.04);
-            padding: 6px 14px; border-radius: 6px;
-        }
-        .tr-stat-num {
-            font-size: clamp(1rem, 2.5vw, 1.5rem); color: #64b5f6;
-            font-weight: 700; font-family: 'Courier New', monospace;
-        }
-        .tr-stat-label { font-size: clamp(0.5rem, 1.3vw, 0.68rem); color: #78909c; }
-
-        .tr-table-wrap {
-            flex: 1; overflow-y: auto; touch-action: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        .tr-table {
-            width: 100%; border-collapse: collapse;
-            font-size: clamp(0.65rem, 1.7vw, 0.95rem);
-        }
-        .tr-table th {
-            background: rgba(255,213,79,0.08); color: #ffd54f;
-            padding: clamp(6px, 1vh, 12px) 6px; font-weight: 700;
-            border-bottom: 2px solid rgba(255,213,79,0.15);
-            position: sticky; top: 0;
-        }
-        .tr-table td {
-            padding: clamp(5px, 1vh, 10px) 6px; text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-        }
-        .tr-table tbody tr:nth-child(1) td { background: rgba(255,213,79,0.06); color: #ffd54f; font-weight: bold; }
-        .tr-table tbody tr:nth-child(2) td { background: rgba(207,216,220,0.04); color: #cfd8dc; }
-        .tr-table tbody tr:nth-child(3) td { background: rgba(188,170,164,0.03); color: #bcaaa4; }
-        .tr-table .score-td { font-weight: 700; color: #ffd54f; }
-        .tr-table .sub-td { color: #78909c; font-size: 0.85em; }
-        .tr-empty {
-            text-align: center; color: #555; padding: 40px;
-            font-size: clamp(0.8rem, 2.5vw, 1.1rem);
-        }
-        @keyframes tr-new { 0% { background: rgba(100,181,246,0.25); } 100% { background: transparent; } }
-        .tr-new td { animation: tr-new 3s ease-out; }
     </style>
 </head>
 <body>
-
-    <!-- 모드 선택 -->
-    <div id="mode-overlay">
-        <div class="mode-title">⚙️ M/A Station 시뮬레이터</div>
-        <div class="mode-sub">CVS670 제어밸브 고장대응 훈련</div>
-        <div class="mode-buttons">
-            <button class="mode-btn mode-btn-student" id="btn-student">🎮 학습자 모드</button>
-            <button class="mode-btn mode-btn-teacher" id="btn-teacher">🏆 교수자 모드</button>
-        </div>
-    </div>
-
-    <!-- 비밀번호 -->
-    <div id="pw-modal">
-        <div class="pw-label">🔒 교수자 비밀번호</div>
-        <input type="password" class="pw-input" id="pw-input" placeholder="비밀번호 입력" maxlength="10" autocomplete="off" inputmode="numeric">
-        <div class="pw-error" id="pw-error"></div>
-        <div class="pw-buttons">
-            <button class="pw-btn pw-btn-ok" id="pw-ok">확인</button>
-            <button class="pw-btn pw-btn-cancel" id="pw-cancel">취소</button>
-        </div>
-    </div>
-
-    <!-- 교수자 랭킹 -->
-    <div id="teacher-ranking">
-        <div class="tr-header">
-            <div class="tr-title">🏆 M/A STATION RANKING</div>
-            <div class="tr-header-btns">
-                <button class="tr-hbtn tr-hbtn-tab" id="tr-tab-today" onclick="trSwitchTab('today')">📅 오늘</button>
-                <button class="tr-hbtn tr-hbtn-tab active" id="tr-tab-all" onclick="trSwitchTab('all')">🏆 전체</button>
-                <button class="tr-hbtn tr-hbtn-clear" onclick="trClear()">🗑</button>
-                <button class="tr-hbtn tr-hbtn-exit" id="tr-exit">✕ 나가기</button>
-            </div>
-        </div>
-        <div class="tr-live"><span class="tr-live-dot"></span>실시간 자동 갱신</div>
-        <div class="tr-stats">
-            <div class="tr-stat"><div class="tr-stat-num" id="tr-players">0</div><div class="tr-stat-label">참가자</div></div>
-            <div class="tr-stat"><div class="tr-stat-num" id="tr-top">-</div><div class="tr-stat-label">최고점수</div></div>
-            <div class="tr-stat"><div class="tr-stat-num" id="tr-avg">-</div><div class="tr-stat-label">평균</div></div>
-            <div class="tr-stat"><div class="tr-stat-num" id="tr-success">0%</div><div class="tr-stat-label">성공률</div></div>
-        </div>
-        <div class="tr-table-wrap">
-            <table class="tr-table">
-                <thead><tr><th>#</th><th style="text-align:left;padding-left:8px;">이름</th><th>총점</th><th>회차</th><th>고장</th><th>⚡</th><th>🛡</th><th>🎯</th></tr></thead>
-                <tbody id="tr-body"></tbody>
-            </table>
-            <div class="tr-empty" id="tr-empty">학습자의 점수 제출을 기다립니다...</div>
-        </div>
-    </div>
 
     <!-- 시작 화면 -->
     <div id="start-overlay">
@@ -666,7 +483,7 @@
         <div class="ranking-header">
             <span>🏆 랭킹</span>
             <div class="ranking-tabs">
-                <button class="rank-tab" id="tab-today" onclick="switchTab('today')">📅 오늘 TOP5</button>
+                <button class="rank-tab" id="tab-today" onclick="switchTab('today')">📅 오늘</button>
                 <button class="rank-tab active" id="tab-all" onclick="switchTab('all')">🏆 전체</button>
             </div>
             <button class="ranking-close-btn" id="ranking-close-btn">✕</button>
@@ -683,7 +500,8 @@
     <!-- 종료 -->
     <div id="exit-screen">
         <div class="exit-msg">시뮬레이션이 종료되었습니다.</div>
-        <div class="exit-sub">브라우저를 닫거나 뒤로가기를 눌러주세요.</div>
+        <div class="exit-sub" style="margin-bottom:16px;">수고하셨습니다!</div>
+        <button class="start-btn" id="restart-btn" style="font-size:1rem; padding:12px 30px;">🔄 처음으로</button>
     </div>
 
     <!-- ===== 상단: 프로세스 ===== -->
@@ -953,6 +771,12 @@
             resultOverlay.style.display = 'none';
             if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
             exitScreen.classList.add('show');
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            exitScreen.classList.remove('show');
+            resetSimulation();
+            startOverlay.style.display = 'flex';
         });
 
         function startSim() {
@@ -1284,7 +1108,7 @@
             board.style.display = 'block';
 
             document.getElementById('score-total').textContent =
-                `${finalTotal.toLocaleString()} / 10,000점`;
+                `${finalTotal.toLocaleString()} / 13,000점`;
             document.getElementById('star-speed').textContent = toStars(sc.speed, 4500);
             document.getElementById('pts-speed').textContent = `${sc.speed.toLocaleString()}/4,500`;
             document.getElementById('star-safety').textContent = toStars(sc.safety, 3500);
@@ -1364,8 +1188,9 @@
         const rankingBody = document.getElementById('ranking-body');
         const rankingEmpty = document.getElementById('ranking-empty');
 
-        let lastSubmittedScore = null; // 제출된 점수 데이터
-        let mySubmitKey = null;        // 내 Firebase key
+        let lastSubmittedScore = null;
+        let mySubmitKey = null;
+        let savedPlayerName = '';  // ④ 이름 유지용
 
         // === 점수 제출 ===
         submitBtn.addEventListener('click', () => {
@@ -1385,6 +1210,7 @@
 
             submitBtn.textContent = '전송 중...';
             submitBtn.style.pointerEvents = 'none';
+            savedPlayerName = name;  // 이름 저장
 
             const data = {
                 name: name,
@@ -1474,9 +1300,9 @@
             let entries;
             if (currentTab === 'today') {
                 const todayStart = getTodayStartKST();
-                entries = allEntries.filter(e => e.timestamp >= todayStart).slice(0, 5);
+                entries = allEntries.filter(e => e.timestamp >= todayStart);
             } else {
-                entries = allEntries.slice(0, 50);
+                entries = allEntries;
             }
 
             if (entries.length === 0) {
@@ -1535,172 +1361,10 @@
             submitBtn.style.pointerEvents = '';
             submitStatus.textContent = '';
             playerNameInput.disabled = false;
+            if (savedPlayerName) playerNameInput.value = savedPlayerName;  // 이름 복원
             submitArea.style.display = '';
             mySubmitKey = null;
         };
-
-        // ===================================================
-        // 모드 선택 + 교수자 랭킹
-        // ===================================================
-        const TEACHER_PW = '6725';
-        const modeOverlay = document.getElementById('mode-overlay');
-        const pwModal = document.getElementById('pw-modal');
-        const pwInput = document.getElementById('pw-input');
-        const pwError = document.getElementById('pw-error');
-        const teacherRanking = document.getElementById('teacher-ranking');
-        const trBody = document.getElementById('tr-body');
-        const trEmpty = document.getElementById('tr-empty');
-
-        let trTab = 'all';
-        let trEntries = [];
-        let trPrevKeys = new Set();
-        let trInterval = null;
-
-        // 학습자 모드
-        document.getElementById('btn-student').addEventListener('click', () => {
-            modeOverlay.style.display = 'none';
-        });
-
-        // 교수자 모드 → 비밀번호
-        document.getElementById('btn-teacher').addEventListener('click', () => {
-            pwModal.classList.add('show');
-            pwInput.value = '';
-            pwError.textContent = '';
-            setTimeout(() => pwInput.focus(), 100);
-        });
-
-        document.getElementById('pw-ok').addEventListener('click', checkPassword);
-        pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkPassword(); });
-
-        document.getElementById('pw-cancel').addEventListener('click', () => {
-            pwModal.classList.remove('show');
-        });
-
-        function checkPassword() {
-            if (pwInput.value === TEACHER_PW) {
-                pwModal.classList.remove('show');
-                modeOverlay.style.display = 'none';
-                teacherRanking.classList.add('show');
-                trLoadRanking();
-                if (!trInterval) trInterval = setInterval(trLoadRanking, 5000);
-            } else {
-                pwError.textContent = '비밀번호가 올바르지 않습니다';
-                pwInput.value = '';
-                pwInput.focus();
-            }
-        }
-
-        // 나가기
-        document.getElementById('tr-exit').addEventListener('click', () => {
-            teacherRanking.classList.remove('show');
-            if (trInterval) { clearInterval(trInterval); trInterval = null; }
-            modeOverlay.style.display = 'flex';
-        });
-
-        // 탭
-        function trSwitchTab(tab) {
-            trTab = tab;
-            document.getElementById('tr-tab-today').classList.toggle('active', tab === 'today');
-            document.getElementById('tr-tab-all').classList.toggle('active', tab === 'all');
-            trRender();
-            trUpdateStats();
-        }
-
-        function trGetTodayStart() {
-            const now = new Date();
-            const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-            const y = kst.getUTCFullYear(), m = kst.getUTCMonth(), d = kst.getUTCDate();
-            return new Date(Date.UTC(y, m, d) - 9 * 60 * 60 * 1000).getTime();
-        }
-
-        function trGetFiltered() {
-            if (trTab === 'today') {
-                const ts = trGetTodayStart();
-                return trEntries.filter(e => e.timestamp >= ts);
-            }
-            return trEntries;
-        }
-
-        function trLoadRanking() {
-            if (!firebaseReady) {
-                trEmpty.textContent = '⚠ Firebase 미설정';
-                trEmpty.style.display = 'block';
-                return;
-            }
-            firebase.database().ref(DB_PATH).once('value').then(snap => {
-                trEntries = [];
-                snap.forEach(c => trEntries.push({ key: c.key, ...c.val() }));
-                trEntries.sort((a, b) => (b.score || 0) - (a.score || 0));
-                trRender();
-                trUpdateStats();
-            }).catch(err => {
-                trEmpty.textContent = '로드 실패: ' + err.message;
-                trEmpty.style.display = 'block';
-            });
-        }
-
-        function trRender() {
-            const entries = trGetFiltered();
-            trBody.innerHTML = '';
-            if (!entries.length) {
-                trEmpty.style.display = 'block';
-                trEmpty.textContent = trTab === 'today'
-                    ? '오늘 제출된 점수가 없습니다.' : '점수 제출을 기다립니다...';
-                return;
-            }
-            trEmpty.style.display = 'none';
-            const newKeys = new Set(entries.map(e => e.key));
-
-            entries.forEach((e, i) => {
-                const tr = document.createElement('tr');
-                if (!trPrevKeys.has(e.key) && trPrevKeys.size > 0) tr.classList.add('tr-new');
-
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
-                const ft = e.faultType === 'open' ? 'F/O' : 'F/C';
-                const ml = e.multiplier > 1 ? `<span style="color:#66bb6a">${e.attempt}회 ×${e.multiplier}</span>`
-                    : e.multiplier < 1 ? `<span style="color:#ef5350">${e.attempt}회 ×${e.multiplier}</span>`
-                    : `${e.attempt}회`;
-                const fail = e.success ? '' : ' <span style="color:#ef5350;font-size:0.8em">(실패)</span>';
-
-                tr.innerHTML = `
-                    <td>${medal}</td>
-                    <td style="text-align:left;padding-left:8px;font-weight:700;">${e.name}${fail}</td>
-                    <td class="score-td">${(e.score||0).toLocaleString()}</td>
-                    <td>${ml}</td>
-                    <td>${ft}</td>
-                    <td class="sub-td">${(e.speed||0).toLocaleString()}</td>
-                    <td class="sub-td">${(e.safety||0).toLocaleString()}</td>
-                    <td class="sub-td">${(e.precision||0).toLocaleString()}</td>
-                `;
-                trBody.appendChild(tr);
-            });
-            trPrevKeys = newKeys;
-        }
-
-        function trUpdateStats() {
-            const entries = trGetFiltered();
-            document.getElementById('tr-players').textContent = entries.length;
-            if (entries.length > 0) {
-                document.getElementById('tr-top').textContent = entries[0].score.toLocaleString();
-                document.getElementById('tr-avg').textContent =
-                    Math.round(entries.reduce((s, e) => s + (e.score||0), 0) / entries.length).toLocaleString();
-                document.getElementById('tr-success').textContent =
-                    Math.round(entries.filter(e => e.success).length / entries.length * 100) + '%';
-            } else {
-                document.getElementById('tr-top').textContent = '-';
-                document.getElementById('tr-avg').textContent = '-';
-                document.getElementById('tr-success').textContent = '0%';
-            }
-        }
-
-        function trClear() {
-            if (!confirm('모든 랭킹 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
-            if (!firebaseReady) return;
-            firebase.database().ref(DB_PATH).remove().then(() => {
-                trEntries = []; trPrevKeys = new Set();
-                trRender(); trUpdateStats();
-            });
-        }
     </script>
 </body>
 </html>
