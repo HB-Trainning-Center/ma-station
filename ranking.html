@@ -158,8 +158,8 @@
     </div>
 
     <div class="tab-bar">
-        <button class="tab-btn active" id="tab-today" onclick="switchTab('today')">📅 오늘의 랭킹<span class="tab-date" id="today-date"></span></button>
-        <button class="tab-btn" id="tab-all" onclick="switchTab('all')">🏆 전체 랭킹</button>
+        <button class="tab-btn" id="tab-today" onclick="switchTab('today')">📅 오늘의 랭킹<span class="tab-date" id="today-date"></span></button>
+        <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">🏆 전체 랭킹</button>
     </div>
 
     <div class="table-container">
@@ -216,7 +216,7 @@
         const emptyMsg = document.getElementById('empty-msg');
         let prevKeys = new Set();
         let allEntries = [];
-        let currentTab = 'today';
+        let currentTab = 'all';
 
         // 오늘 날짜 표시 (KST)
         const now = new Date();
@@ -346,10 +346,12 @@
         loadRanking();
         setInterval(loadRanking, 5000);
 
-        // 실시간 리스너
+        // 실시간 리스너 (디바운스 적용 — 새 항목이 여러 개 들어와도 1회만 로드)
         if (firebaseReady) {
+            let reloadTimer = null;
             firebase.database().ref(DB_PATH).on('child_added', () => {
-                setTimeout(loadRanking, 300);
+                clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(loadRanking, 800);
             });
         }
     </script>

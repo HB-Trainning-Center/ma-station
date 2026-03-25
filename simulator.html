@@ -481,8 +481,8 @@
         <div class="ranking-header">
             <span>🏆 랭킹</span>
             <div class="ranking-tabs">
-                <button class="rank-tab active" id="tab-today" onclick="switchTab('today')">📅 오늘 TOP5</button>
-                <button class="rank-tab" id="tab-all" onclick="switchTab('all')">🏆 전체</button>
+                <button class="rank-tab" id="tab-today" onclick="switchTab('today')">📅 오늘 TOP5</button>
+                <button class="rank-tab active" id="tab-all" onclick="switchTab('all')">🏆 전체</button>
             </div>
             <button class="ranking-close-btn" id="ranking-close-btn">✕</button>
         </div>
@@ -1235,7 +1235,7 @@
         });
 
         // === 랭킹 보기 ===
-        let currentTab = 'today';
+        let currentTab = 'all';
         let allEntries = [];
 
         rankingToggleBtn.addEventListener('click', () => {
