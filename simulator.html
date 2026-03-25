@@ -1268,15 +1268,13 @@
             }
 
             firebase.database().ref(DB_PATH)
-                .orderByChild('score')
-                .limitToLast(100)
                 .once('value')
                 .then(snap => {
                     allEntries = [];
                     snap.forEach(child => {
                         allEntries.push({ key: child.key, ...child.val() });
                     });
-                    allEntries.sort((a, b) => b.score - a.score);
+                    allEntries.sort((a, b) => (b.score || 0) - (a.score || 0));
                     renderRanking();
                 })
                 .catch(err => {
