@@ -750,9 +750,6 @@
 
         // === 시작 ===
         startBtn.addEventListener('click', () => {
-            const el = document.documentElement;
-            if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
             startOverlay.style.display = 'none';
             currentAttempt = 1;
             attemptBadge.textContent = `${currentAttempt} / ${MAX_ATTEMPTS}`;
