@@ -430,6 +430,7 @@
             <p class="brief-section">⚠ 수위 0%/100%가 <strong>20초 지속</strong>시 실패 · 총 <em>3회</em> 도전 가능</p>
         </div>
         <button class="start-btn" id="start-btn">▶ 시작</button>
+        <button class="ranking-toggle-btn" id="start-ranking-btn" style="margin-top:14px;">🏆 랭킹 확인</button>
     </div>
 
     <!-- 결과 -->
@@ -1247,6 +1248,11 @@
         let allEntries = [];
 
         rankingToggleBtn.addEventListener('click', () => {
+            rankingOverlay.classList.add('show');
+            loadRanking();
+        });
+
+        document.getElementById('start-ranking-btn').addEventListener('click', () => {
             rankingOverlay.classList.add('show');
             loadRanking();
         });
