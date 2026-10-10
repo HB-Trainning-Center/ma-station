@@ -411,7 +411,7 @@
         rankingEmpty.textContent='불러오는 중...';rankingEmpty.style.display='block';
         let done=false;
         const tm=setTimeout(()=>{if(done)return;rankingEmpty.textContent='⚠ 서버 응답 없음(10초) — 인터넷 또는 DB 주소/규칙을 확인하세요';rankingEmpty.style.display='block';},10000);
-        firebase.database().ref(DBP).once('value').then(s=>{done=true;clearTimeout(tm);aE=[];s.forEach(c=>aE.push({key:c.key,...c.val()}));aE.sort((a,b)=>(b.score||0)-(a.score||0));renR();})
+        firebase.database().ref(DBP).once('value').then(s=>{done=true;clearTimeout(tm);const v=s.val()||{};aE=Object.keys(v).filter(k=>v[k]&&typeof v[k]==='object').map(k=>({key:k,...v[k]}));aE.sort((a,b)=>(b.score||0)-(a.score||0));renR();})
         .catch(e=>{done=true;clearTimeout(tm);rankingEmpty.textContent='⚠ 데이터 로드 실패: '+fbErr(e);rankingEmpty.style.display='block';});
     }
     function renR(){rankingBody.innerHTML='';let e=cT==='today'?aE.filter(e=>e.timestamp>=gTKST()):aE;if(!e.length){rankingEmpty.style.display='block';rankingEmpty.textContent=cT==='today'?'오늘 기록 없음':'기록 없음';return;}rankingEmpty.style.display='none';e.forEach((e,i)=>{const tr=document.createElement('tr');if(e.key===mSK)tr.classList.add('me');const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);const ml=e.multiplier>1?`${e.attempt}↑`:e.multiplier<1?`${e.attempt}↓`:`${e.attempt}`;tr.innerHTML=`<td>${m}</td><td>${e.name}${e.success?'':' ✗'}</td><td><b>${(e.score||0).toLocaleString()}</b></td><td>${ml}</td><td>${(e.speed||0).toLocaleString()}</td><td>${(e.safety||0).toLocaleString()}</td><td>${(e.precision||0).toLocaleString()}</td>`;rankingBody.appendChild(tr);});}
