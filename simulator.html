@@ -51,7 +51,7 @@
         .submit-status { text-align:center; font-size:clamp(0.55rem,1.5vw,0.7rem); margin-top:3px; min-height:1em; opacity:0.8; }
 
         /* 랭킹 */
-        #ranking-overlay { z-index:1650; background:rgba(15,12,41,0.96); padding:10px; }
+        #ranking-overlay { z-index:1650; background:rgba(15,12,41,0.96); padding:10px; align-items:stretch; }
         .ranking-header { display:flex; justify-content:space-between; align-items:center; padding:4px; font-size:clamp(0.85rem,2.5vw,1.1rem); font-weight:bold; color:#ffd54f; border-bottom:1px solid rgba(255,255,255,0.15); margin-bottom:4px; gap:4px; }
         .ranking-tabs { display:flex; gap:4px; }
         .rank-tab { padding:4px 10px; font-size:clamp(0.55rem,1.5vw,0.7rem); font-weight:bold; border-radius:4px; cursor:pointer; border:1px solid #555; background:rgba(255,255,255,0.05); color:#999; touch-action:auto; white-space:nowrap; }
@@ -384,17 +384,39 @@
     const fbc={apiKey:"AIzaSyAyEMHjR_ocjTxT7yZs5K95PWtjTpbWUNs",authDomain:"filter-simulator.firebaseapp.com",databaseURL:"https://ma-station-cb4b9-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"filter-simulator",storageBucket:"filter-simulator.firebasestorage.app",messagingSenderId:"636862608696",appId:"1:636862608696:web:6630ad47f17dfba6287dcd"};
     let fbR=false;try{firebase.initializeApp(fbc);fbR=true;}catch(e){}
     const DBP='ma_station_rankings';
-    submitBtn.addEventListener('click',()=>{const n=playerNameInput.value.trim();if(!n){submitStatus.textContent='⚠ 이름을 입력해주세요';submitStatus.style.color='#ef5350';playerNameInput.focus();return;}if(!fbR){submitStatus.textContent='⚠ Firebase 미설정';submitStatus.style.color='#ef5350';return;}if(!lSS)return;submitBtn.textContent='전송 중...';submitBtn.style.pointerEvents='none';sPN=n;const d={name:n,score:lSS.ft,baseScore:lSS.bt,attempt:lSS.at,multiplier:lSS.ml,faultType:lSS.fT,speed:lSS.sp,safety:lSS.sf,precision:lSS.pr,success:lSS.su,timestamp:firebase.database.ServerValue.TIMESTAMP};const r=firebase.database().ref(DBP).push();mSK=r.key;r.set(d).then(()=>{submitBtn.textContent='✅ 제출 완료';submitBtn.classList.add('done');submitStatus.textContent=`"${n}" 등록됨`;submitStatus.style.color='#66bb6a';playerNameInput.disabled=true;}).catch(e=>{submitBtn.textContent='📤 점수 제출';submitBtn.style.pointerEvents='';submitStatus.textContent='⚠ 실패';submitStatus.style.color='#ef5350';});});
+    let pRef=null; // 같은 점수의 재전송 시 동일 키 재사용(중복 등록 방지)
+    function fbErr(e){return (e&&(e.code||e.message))?String(e.code||e.message):'알 수 없는 오류';}
+    submitBtn.addEventListener('click',()=>{
+        const n=playerNameInput.value.trim();
+        if(!n){submitStatus.textContent='⚠ 이름을 입력해주세요';submitStatus.style.color='#ef5350';playerNameInput.focus();return;}
+        if(!fbR){submitStatus.textContent='⚠ Firebase 초기화 실패 — 인터넷 연결을 확인하세요';submitStatus.style.color='#ef5350';return;}
+        if(!lSS)return;
+        submitBtn.textContent='전송 중...';submitBtn.style.pointerEvents='none';sPN=n;
+        submitStatus.textContent='';
+        const d={name:n,score:lSS.ft,baseScore:lSS.bt,attempt:lSS.at,multiplier:lSS.ml,faultType:lSS.fT,speed:lSS.sp,safety:lSS.sf,precision:lSS.pr,success:lSS.su,timestamp:firebase.database.ServerValue.TIMESTAMP};
+        if(!pRef)pRef=firebase.database().ref(DBP).push();
+        const r=pRef;mSK=r.key;let done=false;
+        const tm=setTimeout(()=>{if(done)return;submitBtn.textContent='📤 다시 제출';submitBtn.style.pointerEvents='';submitStatus.textContent='⚠ 서버 응답 없음(10초) — 인터넷 또는 DB 주소/규칙 확인 후 다시 눌러주세요';submitStatus.style.color='#ffd54f';},10000);
+        r.set(d).then(()=>{done=true;clearTimeout(tm);submitBtn.textContent='✅ 제출 완료';submitBtn.classList.add('done');submitBtn.style.pointerEvents='none';submitStatus.textContent=`"${n}" 등록됨`;submitStatus.style.color='#66bb6a';playerNameInput.disabled=true;})
+        .catch(e=>{done=true;clearTimeout(tm);submitBtn.textContent='📤 점수 제출';submitBtn.style.pointerEvents='';submitStatus.textContent='⚠ 전송 실패: '+fbErr(e);submitStatus.style.color='#ef5350';});
+    });
     let cT='all',aE=[];
     $('ranking-toggle-btn').addEventListener('click',()=>{show(rankingOverlay);loadR();});
     $('start-ranking-btn').addEventListener('click',()=>{show(rankingOverlay);loadR();});
     $('ranking-close-btn').addEventListener('click',()=>{hide(rankingOverlay);});
     function switchTab(t){cT=t;$('tab-today').classList.toggle('active',t==='today');$('tab-all').classList.toggle('active',t==='all');renR();}
     function gTKST(){const n=new Date(),k=new Date(n.getTime()+9*3600000);return new Date(Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate())-9*3600000).getTime();}
-    function loadR(){if(!fbR){rankingBody.innerHTML='';rankingEmpty.textContent='Firebase 미설정';rankingEmpty.style.display='block';return;}firebase.database().ref(DBP).once('value').then(s=>{aE=[];s.forEach(c=>aE.push({key:c.key,...c.val()}));aE.sort((a,b)=>(b.score||0)-(a.score||0));renR();}).catch(()=>{rankingEmpty.textContent='로드 실패';rankingEmpty.style.display='block';});}
+    function loadR(){
+        if(!fbR){rankingBody.innerHTML='';rankingEmpty.textContent='Firebase 초기화 실패 — 인터넷 연결을 확인하세요';rankingEmpty.style.display='block';return;}
+        rankingEmpty.textContent='불러오는 중...';rankingEmpty.style.display='block';
+        let done=false;
+        const tm=setTimeout(()=>{if(done)return;rankingEmpty.textContent='⚠ 서버 응답 없음(10초) — 인터넷 또는 DB 주소/규칙을 확인하세요';rankingEmpty.style.display='block';},10000);
+        firebase.database().ref(DBP).once('value').then(s=>{done=true;clearTimeout(tm);aE=[];s.forEach(c=>aE.push({key:c.key,...c.val()}));aE.sort((a,b)=>(b.score||0)-(a.score||0));renR();})
+        .catch(e=>{done=true;clearTimeout(tm);rankingEmpty.textContent='⚠ 데이터 로드 실패: '+fbErr(e);rankingEmpty.style.display='block';});
+    }
     function renR(){rankingBody.innerHTML='';let e=cT==='today'?aE.filter(e=>e.timestamp>=gTKST()):aE;if(!e.length){rankingEmpty.style.display='block';rankingEmpty.textContent=cT==='today'?'오늘 기록 없음':'기록 없음';return;}rankingEmpty.style.display='none';e.forEach((e,i)=>{const tr=document.createElement('tr');if(e.key===mSK)tr.classList.add('me');const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);const ml=e.multiplier>1?`${e.attempt}↑`:e.multiplier<1?`${e.attempt}↓`:`${e.attempt}`;tr.innerHTML=`<td>${m}</td><td>${e.name}${e.success?'':' ✗'}</td><td><b>${(e.score||0).toLocaleString()}</b></td><td>${ml}</td><td>${(e.speed||0).toLocaleString()}</td><td>${(e.safety||0).toLocaleString()}</td><td>${(e.precision||0).toLocaleString()}</td>`;rankingBody.appendChild(tr);});}
 
-    const _oSR=showR;showR=function(s,t){_oSR(s,t);const sc=calcS(s,t),ml=AM[cA-1];lSS={ft:Math.round(sc.total*ml),bt:sc.total,at:cA,ml,fT:'close',sp:sc.speed,sf:sc.safety,pr:sc.precision,su:s};submitBtn.textContent='📤 점수 제출';submitBtn.classList.remove('done');submitBtn.style.pointerEvents='';submitStatus.textContent='';playerNameInput.disabled=false;if(sPN)playerNameInput.value=sPN;submitArea.style.display='';mSK=null;};
+    const _oSR=showR;showR=function(s,t){_oSR(s,t);const sc=calcS(s,t),ml=AM[cA-1];lSS={ft:Math.round(sc.total*ml),bt:sc.total,at:cA,ml,fT:'close',sp:sc.speed,sf:sc.safety,pr:sc.precision,su:s};submitBtn.textContent='📤 점수 제출';submitBtn.classList.remove('done');submitBtn.style.pointerEvents='';submitStatus.textContent='';playerNameInput.disabled=false;if(sPN)playerNameInput.value=sPN;submitArea.style.display='';mSK=null;pRef=null;};
     </script>
 </body>
 </html>
